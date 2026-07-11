@@ -10,3 +10,4 @@ Pillow==11.2.1
 gunicorn==26.0.0 
 asgiref==3.10.0 
 sqlparse==0.5.3 
+echo dj-database-url==2.3.0 >> requirements.txt
