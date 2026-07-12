@@ -41,11 +41,11 @@ class Student(AbstractBaseUser, PermissionsMixin):
     course = models.CharField(max_length=10, choices=COURSE_CHOICES)
     year = models.CharField(max_length=1, choices=YEAR_CHOICES)
     bio = models.TextField(blank=True)
-    profile_photo = models.ImageField(
-        upload_to='profile_photos/',
-        blank=True,
-        null=True
-    )
+    profile_photo = models.CharField(
+    max_length=500,
+    blank=True,
+    null=True
+)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
