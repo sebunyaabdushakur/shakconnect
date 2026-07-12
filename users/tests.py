@@ -1,3 +1,11 @@
-from django.test import TestCase
+from django.conf import settings
+from django.test import SimpleTestCase
 
-# Create your tests here.
+
+class ProfileImageStorageConfigurationTest(SimpleTestCase):
+    def test_profile_photo_uploads_use_cloudinary_storage(self):
+        self.assertEqual(
+            settings.DEFAULT_FILE_STORAGE,
+            'cloudinary_storage.storage.MediaCloudinaryStorage'
+        )
+        self.assertIn('cloudinary_storage', settings.INSTALLED_APPS)
