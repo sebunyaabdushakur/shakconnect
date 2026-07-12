@@ -1,143 +1,130 @@
-from rest_framework import status, generics
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from pathlib import Path
+import os
+import dj_database_url
+from dotenv import load_dotenv
+from datetime import timedelta
 
-from django.contrib.auth import authenticate
-from django.conf import settings
-from .models import Student
-from .serializers import (
-    RegisterSerializer,
-    StudentProfileSerializer,
-    StudentListSerializer,
-    UpdateProfileSerializer
-)
+load_dotenv()
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-class RegisterView(APIView):
-    permission_classes = [AllowAny]
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-shakconnect-dev-key-2024')
 
-    def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            student = serializer.save()
-            refresh = RefreshToken.for_user(student)
-            return Response({
-                'message': f'Welcome to Shak Connect, {student.full_name}!',
-                'tokens': {
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
-                },
-                'student': StudentProfileSerializer(student).data
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
+ALLOWED_HOSTS = ['*']
 
-class LoginView(APIView):
-    permission_classes = [AllowAny]
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary',
+    'corsheaders',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'users',
+    'social',
+]
 
-    def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
 
-        if not email or not password:
-            return Response({
-                'error': 'Email and password are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+ROOT_URLCONF = 'shakconnect.urls'
 
-        student = authenticate(request, email=email, password=password)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
-        if not student:
-            return Response({
-                'error': 'Invalid email or password'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+WSGI_APPLICATION = 'shakconnect.wsgi.application'
 
-        if student.is_banned:
-            return Response({
-                'error': f'Your account has been suspended. Reason: {student.ban_reason}'
-            }, status=status.HTTP_403_FORBIDDEN)
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-        refresh = RefreshToken.for_user(student)
-        return Response({
-            'message': f'Welcome back, {student.full_name}!',
-            'tokens': {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-            },
-            'student': StudentProfileSerializer(student).data
-        })
-
-
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            refresh_token = request.data.get('refresh')
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'message': 'Logged out successfully'})
-        except Exception:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class MyProfileView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        serializer = StudentProfileSerializer(request.user)
-        return Response(serializer.data)
-
-    def put(self, request):
-        import cloudinary
-        print("Cloudinary cloud_name:", cloudinary.config().cloud_name)
-        print("File storage:", settings.DEFAULT_FILE_STORAGE)
-        print("Files received:", request.FILES)
-        serializer = UpdateProfileSerializer(
-            request.user,
-            data=request.data,
-            partial=True
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                'message': 'Profile updated successfully',
-                'student': StudentProfileSerializer(request.user).data
-            })
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
 
-class StudentListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = StudentListSerializer
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'Africa/Kampala'
+USE_I18N = True
+USE_TZ = True
 
-    def get_queryset(self):
-        queryset = Student.objects.filter(
-            is_active=True,
-            is_banned=False
-        ).exclude(id=self.request.user.id)
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-        course = self.request.query_params.get('course')
-        year = self.request.query_params.get('year')
-        search = self.request.query_params.get('search')
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-        if course:
-            queryset = queryset.filter(course=course)
-        if year:
-            queryset = queryset.filter(year=year)
-        if search:
-            queryset = queryset.filter(full_name__icontains=search)
+AUTH_USER_MODEL = 'users.Student'
 
-        return queryset
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+}
 
-class StudentDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+}
 
-    def get(self, request, pk):
-        try:
-            student = Student.objects.get(pk=pk, is_active=True, is_banned=False)
-            serializer = StudentProfileSerializer(student)
-            return Response(serializer.data)
-        except Student.DoesNotExist:
-            return Response({'error': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+LOGIN_URL = '/api/auth/login/'
+
+CORS_ALLOW_ALL_ORIGINS = True
