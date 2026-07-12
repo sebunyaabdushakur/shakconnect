@@ -81,6 +81,12 @@ class StudentListSerializer(serializers.ModelSerializer):
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
+    profile_photo = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True
+    )
+
     class Meta:
         model = Student
         fields = [
@@ -92,12 +98,12 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
-        photo = validated_data.pop('profile_photo', None)
-        if photo:
+        validated_data.pop('profile_photo', None)
+        photo_file = self.context['request'].FILES.get('profile_photo')
+        if photo_file:
             import cloudinary.uploader
-            result = cloudinary.uploader.upload(photo)
+            result = cloudinary.uploader.upload(photo_file)
             url = result.get('secure_url')
-            Student.objects.filter(pk=instance.pk).update(profile_photo=url)
             instance.profile_photo = url
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
