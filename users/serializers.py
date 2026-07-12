@@ -92,14 +92,13 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
-        photo = validated_data.get('profile_photo')
+        photo = validated_data.pop('profile_photo', None)
         if photo:
             import cloudinary.uploader
-            print("Uploading to Cloudinary...")
             result = cloudinary.uploader.upload(photo)
-            print("Cloudinary result:", result.get('secure_url'))
-            instance.profile_photo = result.get('secure_url')
-            validated_data.pop('profile_photo')
+            url = result.get('secure_url')
+            Student.objects.filter(pk=instance.pk).update(profile_photo=url)
+            instance.profile_photo = url
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
