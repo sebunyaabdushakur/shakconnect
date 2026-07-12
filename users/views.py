@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.conf import settings
 from .models import Student
 from .serializers import (
     RegisterSerializer,
@@ -88,6 +89,14 @@ class MyProfileView(APIView):
         return Response(serializer.data)
 
     def put(self, request):
+        import cloudinary
+        print("=== CLOUDINARY DEBUG ===")
+        print("Cloud name:", cloudinary.config().cloud_name)
+        print("API Key:", cloudinary.config().api_key)
+        print("File storage:", settings.DEFAULT_FILE_STORAGE)
+        print("Files:", request.FILES)
+        print("========================")
+
         serializer = UpdateProfileSerializer(
             request.user,
             data=request.data,
