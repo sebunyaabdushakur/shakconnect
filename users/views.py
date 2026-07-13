@@ -89,24 +89,32 @@ class MyProfileView(APIView):
         return Response(serializer.data)
 
     def put(self, request):
-        import cloudinary
-        print("=== CLOUDINARY DEBUG ===")
-        print("Cloud name:", cloudinary.config().cloud_name)
-        print("API Key:", cloudinary.config().api_key)
-        print("File storage:", settings.DEFAULT_FILE_STORAGE)
-        print("Files:", request.FILES)
-        print("========================")
+        import cloudinary.uploader
+
+        # Handle photo upload separately
+        photo_url = None
+        if 'profile_photo' in request.FILES:
+            photo_file = request.FILES['profile_photo']
+            result = cloudinary.uploader.upload(photo_file)
+            photo_url = result.get('secure_url')
+
+        # Update other fields
+        data = request.data.copy()
+        data.pop('profile_photo', None)
 
         serializer = UpdateProfileSerializer(
             request.user,
-            data=request.data,
+            data=data,
             partial=True
         )
         if serializer.is_valid():
-            serializer.save()
+            student = serializer.save()
+            if photo_url:
+                student.profile_photo = photo_url
+                student.save()
             return Response({
                 'message': 'Profile updated successfully',
-                'student': StudentProfileSerializer(request.user).data
+                'student': StudentProfileSerializer(student).data
             })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

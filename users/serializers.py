@@ -94,8 +94,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             'bio',
             'course',
             'year',
-            'profile_photo',
-        ]
+                ]
 
     def update(self, instance, validated_data):
         validated_data.pop('profile_photo', None)
